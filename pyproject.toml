@@ -9,7 +9,7 @@ description = "CPU-optimized vehicle and pedestrian counting from RTSP streams"
 requires-python = ">=3.11"
 
 dependencies = [
-    "onnxruntime>=1.18",
+    "onnxruntime>=1.19",
     "opencv-python-headless>=4.9",
     "supervision>=0.21",
     "numpy>=2.1",
@@ -33,7 +33,7 @@ export = [
     "ultralytics==8.2.*",
 ]
 quantize = [
-    "onnxruntime==1.18.*",
+    "onnxruntime==1.19.*",
     "onnx==1.16.*",
 ]
 dev = [
