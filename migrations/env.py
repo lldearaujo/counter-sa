@@ -26,6 +26,12 @@ _raw_url = os.environ.get(
     "postgresql+asyncpg://easycount:easycount@localhost:5432/easycount",
 )
 
+# Railway/Heroku fornecem postgres:// ou postgresql:// — converter para asyncpg
+if _raw_url.startswith("postgres://"):
+    _raw_url = _raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif _raw_url.startswith("postgresql://"):
+    _raw_url = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 # Remove sslmode=disable — asyncpg não aceita esse parâmetro na URL
 if "sslmode=disable" in _raw_url or "ssl=false" in _raw_url.lower():
     _raw_url = _raw_url.split("?")[0]

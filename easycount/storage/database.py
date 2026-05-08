@@ -17,6 +17,12 @@ async def init_db(database_url: str, pool_min: int = 2, pool_max: int = 10) -> N
 
     # asyncpg não aceita sslmode= na URL (é parâmetro do psycopg2).
     # Detecta e converte para connect_args={"ssl": False}.
+    # Railway/Heroku fornecem postgres:// ou postgresql:// — converter para asyncpg
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
     connect_args: dict = {}
     if "sslmode=disable" in database_url:
         database_url = database_url.split("?")[0]
