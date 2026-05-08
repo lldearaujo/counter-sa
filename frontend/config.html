@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyCount — Configurar Streams</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/config.css" />
+</head>
+<body>
+  <header class="header">
+    <h1>EasyCount</h1>
+    <nav class="header-nav">
+      <a href="/" class="nav-link">Dashboard</a>
+      <a href="/config" class="nav-link active">Configurar</a>
+    </nav>
+    <div class="header-status"></div>
+  </header>
+
+  <main class="config-main">
+    <div class="config-toolbar">
+      <h2 class="config-title">Streams Configurados</h2>
+      <button id="btn-new" class="btn btn-primary">+ Novo Stream</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="streams-table" id="streams-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>URL RTSP</th>
+            <th>Status</th>
+            <th>FPS</th>
+            <th>Zonas</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="streams-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty-state">
+        Nenhum stream configurado. Clique em "+ Novo Stream" para começar.
+      </div>
+    </div>
+  </main>
+
+  <!-- ── Stream config modal ──────────────────────────────── -->
+  <div id="stream-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-dialog">
+
+      <div class="modal-header">
+        <h2 id="modal-title">Novo Stream</h2>
+        <button class="btn-icon-close" id="modal-close" aria-label="Fechar">&times;</button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- LEFT: formulário + lista de zonas -->
+        <div class="form-panel">
+
+          <div class="form-group">
+            <label for="f-id">ID do Stream <span class="required">*</span></label>
+            <input id="f-id" type="text" required pattern="[a-zA-Z0-9_-]+"
+                   placeholder="cam_01" autocomplete="off" />
+            <span class="field-hint">Letras, números, _ e -</span>
+          </div>
+
+          <div class="form-group">
+            <label for="f-name">Nome <span class="required">*</span></label>
+            <input id="f-name" type="text" required placeholder="Câmera Entrada Principal" />
+          </div>
+
+          <div class="form-group">
+            <label for="f-url">URL RTSP <span class="required">*</span></label>
+            <input id="f-url" type="text" required
+                   placeholder="rtsp://usuario:senha@192.168.1.1:554/stream"
+                   autocomplete="off" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group form-group--check">
+              <label>
+                <input id="f-enabled" type="checkbox" checked />
+                Habilitado
+              </label>
+            </div>
+            <div class="form-group">
+              <label for="f-cores">CPU Cores</label>
+              <input id="f-cores" type="text" placeholder="0,1" />
+              <span class="field-hint">Separados por vírgula — vazio = sem afinidade</span>
+            </div>
+          </div>
+
+          <div class="zones-section">
+            <div class="zones-section-title">Zonas de Contagem</div>
+            <div class="zones-list" id="zones-list">
+              <span class="no-zones-hint">Desenhe linhas ou polígonos no canvas →</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: editor canvas -->
+        <div class="canvas-panel">
+
+          <div class="zone-editor-toolbar">
+            <button type="button" id="btn-snapshot" class="btn btn-sm btn-secondary">
+              ⟳ Carregar Preview
+            </button>
+            <div class="tool-group">
+              <button type="button" id="btn-tool-line" class="btn btn-sm btn-tool active"
+                      data-tool="line" title="Linha (2 cliques)">Linha</button>
+              <button type="button" id="btn-tool-poly" class="btn btn-sm btn-tool"
+                      data-tool="polygon" title="Polígono (duplo-clique para fechar)">Polígono</button>
+            </div>
+            <button type="button" id="btn-cancel-zone" class="btn btn-sm btn-danger hidden">
+              ✕ Cancelar
+            </button>
+          </div>
+
+          <div class="canvas-wrap" id="canvas-wrap">
+            <canvas id="zone-canvas" width="640" height="360"></canvas>
+            <div id="canvas-hint" class="canvas-hint">
+              Informe a URL RTSP e clique "Carregar Preview"
+            </div>
+          </div>
+
+          <p class="zone-editor-tip">
+            <strong>Linha:</strong> 2 cliques para definir &nbsp;·&nbsp;
+            <strong>Polígono:</strong> cliques para pontos, duplo-clique para fechar &nbsp;·&nbsp;
+            Botão direito cancela o desenho atual
+          </p>
+
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span id="form-error" class="form-error"></span>
+        <button type="button" id="btn-modal-cancel" class="btn btn-secondary">Cancelar</button>
+        <button type="button" id="btn-save" class="btn btn-primary">Salvar Stream</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Confirm delete modal ──────────────────────────────── -->
+  <div id="confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-dialog modal-dialog--sm">
+      <div class="modal-header">
+        <h2>Confirmar exclusão</h2>
+      </div>
+      <div class="modal-body modal-body--pad">
+        <p id="confirm-msg"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirm-cancel" class="btn btn-secondary">Cancelar</button>
+        <button id="confirm-ok" class="btn btn-danger">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/config.js"></script>
+</body>
+</html>

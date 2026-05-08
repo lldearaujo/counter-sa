@@ -1,0 +1,26 @@
+# Template de configuração de stream — copie e renomeie para cam_XX.yaml
+
+stream_id: "cam_XX"          # identificador único (usado como chave no banco)
+name: "Nome da Câmera"       # nome legível para o dashboard
+rtsp_url: "rtsp://user:pass@192.168.1.X:554/stream"
+enabled: true
+
+# Cores lógicos aos quais o processo worker será afixado (CPU affinity)
+# Deixe vazio [] para sem afinidade. Use pares para intra_op_threads=2.
+cpu_cores: []
+
+counting_zones:
+  - type: "line"             # "line" ou "polygon"
+    name: "entrada_principal"
+    # Para linha: 2 pontos [x, y] em pixels (resolução original da câmera)
+    # Para polígono: 3+ pontos em sentido horário
+    points: [[640, 300], [640, 700]]
+    # "in"=cruzamento esquerda→direita (ou cima→baixo), "out"=inverso, "both"=ambos
+    direction: "both"
+    # Classes a rastrear nesta zona. null = todas as classes configuradas
+    track_classes:
+      - car
+      - motorcycle
+      - bus
+      - truck
+      - pedestrian

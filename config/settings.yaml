@@ -1,0 +1,50 @@
+app:
+  host: "0.0.0.0"
+  port: 8000
+  log_level: "INFO"
+
+inference:
+  model_path: "models/yolov8n_int8.onnx"
+  model_path_fp32: "models/yolov8n.onnx"   # fallback se INT8 não existir
+  input_size: [640, 640]
+  confidence_threshold: 0.35
+  nms_threshold: 0.45
+  intra_op_threads: 2     # threads ONNX Runtime por worker process
+  inter_op_threads: 1
+  max_detections: 50      # limita detecções antes do tracker (performance)
+
+capture:
+  target_fps: 10          # FPS alvo para inferência (não para captura)
+  reconnect_delay_sec: 5
+  frame_buffer_size: 2    # deque maxlen — descarta frames velhos
+
+tracking:
+  max_age: 30             # frames sem detecção antes de deletar track
+  min_hits: 1             # detecções para confirmar track novo
+  iou_threshold: 0.3
+
+database:
+  snapshot_interval_sec: 60   # frequência de insert em count_snapshots
+  pool_min_size: 2
+  pool_max_size: 10
+
+websocket:
+  push_interval_ms: 500       # frequência de push para clientes WS
+
+# Classes COCO relevantes (id → nome interno)
+classes:
+  0: pedestrian
+  1: bicycle
+  2: car
+  3: motorcycle
+  5: bus
+  7: truck
+
+# Thresholds de confiança por classe (sobrescrevem confidence_threshold global)
+class_thresholds:
+  pedestrian: 0.35
+  bicycle: 0.40
+  car: 0.40
+  motorcycle: 0.35
+  bus: 0.50
+  truck: 0.50

@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: easycount
+      POSTGRES_USER: easycount
+      POSTGRES_PASSWORD: easycount
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easycount"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://easycount:easycount@postgres:5432/easycount
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../models:/app/models       # montar modelos ONNX (não incluídos na imagem)
+      - ../config:/app/config       # configurações de streams em tempo real
+      - ../data:/app/data
+
+volumes:
+  pgdata:

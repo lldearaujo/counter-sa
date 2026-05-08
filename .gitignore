@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Environment (contém credenciais)
+.env
+
+# Models (binários grandes)
+*.onnx
+*.pt
+*.tflite
+
+# Configurações de stream (contêm URLs RTSP com credenciais)
+config/streams/*.yaml
+!config/streams/_template.yaml
+
+# Banco de dados
+*.db
+data/*.db
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyCount — Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="header">
+    <h1>EasyCount</h1>
+    <nav class="header-nav">
+      <a href="/" class="nav-link active">Dashboard</a>
+      <a href="/config" class="nav-link">Configurar</a>
+    </nav>
+    <div class="header-status">
+      <span id="ws-indicator" class="dot offline" title="WebSocket"></span>
+      <span id="ws-label">Desconectado</span>
+    </div>
+  </header>
+
+  <main id="streams-grid" class="grid">
+    <div class="empty-state" id="empty-state">
+      Aguardando streams...
+    </div>
+  </main>
+
+  <!-- Modal de detalhes -->
+  <dialog id="detail-modal">
+    <div class="modal-content">
+      <h2 id="modal-title">Detalhes</h2>
+      <canvas id="modal-chart" height="200"></canvas>
+      <button onclick="document.getElementById('detail-modal').close()">Fechar</button>
+    </div>
+  </dialog>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
