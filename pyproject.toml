@@ -30,7 +30,7 @@ dependencies = [
 
 [project.optional-dependencies]
 export = [
-    "ultralytics==8.2.*",
+    "ultralytics>=8.3",
 ]
 quantize = [
     "onnxruntime==1.19.*",
