@@ -93,10 +93,16 @@ class StreamWorker(mp.Process):
             iou_threshold=trk_cfg.get("iou_threshold", 0.3),
         )
 
-        counter = Counter(zones=self._stream_cfg.get("counting_zones", []))
+        counting_zones = self._stream_cfg.get("counting_zones", [])
+        counter = Counter(zones=counting_zones)
 
         capturer.start()
         log.info("Worker iniciado para stream: %s", sid)
+        for z in counting_zones:
+            log.info(
+                "Zona configurada: nome=%s tipo=%s pontos=%s classes=%s",
+                z.get("name"), z.get("type"), z.get("points"), z.get("track_classes"),
+            )
 
         target_fps = cap_cfg.get("target_fps", 10)
         frame_interval = 1.0 / target_fps
@@ -123,6 +129,10 @@ class StreamWorker(mp.Process):
                         "Frame %d | detecções: %d | tracks: %d | fps: %.1f",
                         frame_num, len(detections), len(tracks), self._current_fps,
                     )
+                    if tracks:
+                        from easycount.utils.geometry import centroid as _centroid
+                        centroids = [(t.class_name, _centroid(t.bbox)) for t in tracks]
+                        log.info("Centroides: %s", centroids)
 
                 if events:
                     for ev in events:
