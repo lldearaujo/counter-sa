@@ -78,6 +78,45 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 /* Mini chart */
 .card canvas { width: 100% !important; }
 
+/* Summary stats */
+.summary-stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: .5rem;
+}
+.stat-box {
+  background: #0f172a; border-radius: .5rem; padding: .6rem .75rem;
+  display: flex; flex-direction: column; align-items: center; gap: .1rem;
+}
+.stat-num {
+  font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1;
+}
+.stat-label { font-size: .7rem; color: var(--muted); letter-spacing: .04em; }
+.stat-in  .stat-num { color: var(--green); }
+.stat-out .stat-num { color: var(--red); }
+
+/* Zone label row */
+.zone-label { color: var(--muted); font-size: .72rem; padding-top: .45rem !important; }
+.no-data { color: var(--muted); font-size: .8rem; padding: .4rem .5rem !important; }
+
+/* Recent events */
+.events-section { display: flex; flex-direction: column; gap: .35rem; }
+.events-title { font-size: .72rem; font-weight: 600; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.events-list { display: flex; flex-direction: column; gap: .2rem; max-height: 160px; overflow-y: auto; }
+.events-list::-webkit-scrollbar { width: 4px; }
+.events-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.event-row {
+  display: grid; grid-template-columns: 4.5rem 1fr 1fr auto;
+  align-items: center; gap: .4rem;
+  font-size: .8rem; padding: .2rem .25rem; border-radius: .25rem;
+  background: #0f172a;
+}
+.event-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.event-cls  { font-weight: 600; }
+.event-zone { color: var(--muted); font-size: .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-dir  { font-weight: 700; font-size: .9rem; text-align: right; }
+.event-dir.in  { color: var(--green); }
+.event-dir.out { color: var(--red); }
+.no-events { color: var(--muted); font-size: .8rem; padding: .25rem; }
+
 /* Modal */
 dialog {
   background: var(--surface); color: var(--text); border: 1px solid var(--border);

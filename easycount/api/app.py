@@ -62,12 +62,15 @@ async def lifespan(app: FastAPI):
     snapshot_interval = db_cfg.get("snapshot_interval_sec", 60)
 
     async def on_events(events: list[dict]) -> None:
-        for ev in events:
-            pass  # stream_id not in ev yet — enriched in aggregator
+        try:
+            await db.insert_crossing_events(events)
+        except Exception as exc:
+            log.error("Erro ao salvar eventos no DB: %s", exc)
 
     aggregator = Aggregator(
         result_queue=result_queue,
         memory_store=memory_store,
+        event_callback=on_events,
         loop=loop,
     )
     aggregator.start()

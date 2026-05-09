@@ -12,11 +12,21 @@ class MemoryStore:
         # {stream_id: {"counts": {...}, "fps": float, "online": bool}}
         self._data: dict[str, dict[str, Any]] = {}
 
+    _MAX_RECENT = 30
+
     def update_counts(self, stream_id: str, counts: dict[str, Any]) -> None:
         with self._lock:
-            entry = self._data.setdefault(stream_id, {"counts": {}, "fps": 0.0, "online": False})
+            entry = self._data.setdefault(stream_id, {"counts": {}, "fps": 0.0, "online": False, "recent_events": []})
             entry["counts"] = counts
             entry["online"] = True
+
+    def add_event(self, stream_id: str, event: dict[str, Any]) -> None:
+        with self._lock:
+            entry = self._data.setdefault(stream_id, {"counts": {}, "fps": 0.0, "online": False, "recent_events": []})
+            recent = entry.setdefault("recent_events", [])
+            recent.append(event)
+            if len(recent) > self._MAX_RECENT:
+                recent.pop(0)
 
     def update_fps(self, stream_id: str, fps: float) -> None:
         with self._lock:

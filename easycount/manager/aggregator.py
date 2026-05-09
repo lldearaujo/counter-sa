@@ -47,16 +47,22 @@ class Aggregator(threading.Thread):
                 pass  # queue.Empty é esperado — timeout normal
 
     def _process(self, result: dict[str, Any]) -> None:
+        from datetime import datetime, timezone
         sid = result["stream_id"]
         self._store.update_counts(sid, result.get("counts", {}))
         self._store.update_fps(sid, result.get("fps", 0.0))
 
         events = result.get("events", [])
-        if events and self._event_callback and self._loop:
-            asyncio.run_coroutine_threadsafe(
-                self._async_callback(events),
-                self._loop,
-            )
+        if events:
+            now = datetime.now(tz=timezone.utc).isoformat()
+            enriched = [{**ev, "stream_id": sid, "occurred_at": now} for ev in events]
+            for ev in enriched:
+                self._store.add_event(sid, ev)
+            if self._event_callback and self._loop:
+                asyncio.run_coroutine_threadsafe(
+                    self._async_callback(enriched),
+                    self._loop,
+                )
 
     async def _async_callback(self, events: list[dict[str, Any]]) -> None:
         try:
