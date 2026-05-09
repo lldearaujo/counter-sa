@@ -21,14 +21,8 @@ let wsReconnectDelay = WS_RECONNECT_BASE;
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws/counts`);
-
-  ws.onopen = () => {
-    setWsStatus(true);
-    wsReconnectDelay = WS_RECONNECT_BASE;
-  };
-  ws.onmessage = (ev) => {
-    try { renderAll(JSON.parse(ev.data)); } catch (_) {}
-  };
+  ws.onopen = () => { setWsStatus(true); wsReconnectDelay = WS_RECONNECT_BASE; };
+  ws.onmessage = (ev) => { try { renderAll(JSON.parse(ev.data)); } catch (_) {} };
   ws.onclose = ws.onerror = () => {
     setWsStatus(false);
     setTimeout(connectWS, wsReconnectDelay);
@@ -42,18 +36,15 @@ function setWsStatus(online) {
 }
 
 // ---------------------------------------------------------------------------
-// Render
+// Live dashboard
 // ---------------------------------------------------------------------------
 function renderAll(data) {
   const grid = document.getElementById('streams-grid');
   const empty = document.getElementById('empty-state');
   const ids = Object.keys(data);
-
   if (!ids.length) { empty.style.display = ''; return; }
   empty.style.display = 'none';
-
   ids.forEach(sid => updateCard(grid, sid, data[sid]));
-
   Object.keys(streamCards).forEach(sid => {
     if (!data[sid]) { streamCards[sid].el.remove(); delete streamCards[sid]; }
   });
@@ -61,26 +52,19 @@ function renderAll(data) {
 
 function updateCard(grid, sid, streamData) {
   const { counts = {}, fps = 0, online = false, recent_events = [] } = streamData;
-
   if (!streamCards[sid]) streamCards[sid] = createCard(grid, sid);
-
   const { el, chart, history } = streamCards[sid];
 
   el.querySelector('.dot').className = 'dot ' + (online ? 'online' : 'offline');
   el.querySelector('.fps-badge').textContent = fps.toFixed(1) + ' fps';
 
-  // Summary totals
   const { totalIn, totalOut } = sumCounts(counts);
   el.querySelector('.stat-in .stat-num').textContent = totalIn;
   el.querySelector('.stat-out .stat-num').textContent = totalOut;
 
-  // Breakdown table
   el.querySelector('tbody').innerHTML = buildTableRows(counts);
-
-  // Recent events
   el.querySelector('.events-list').innerHTML = buildRecentEvents(recent_events);
 
-  // Sparkline
   const total = totalIn + totalOut;
   history.push(total);
   if (history.length > HISTORY_WINDOW) history.shift();
@@ -98,12 +82,11 @@ function buildTableRows(counts) {
       const inN = dirs.in ?? 0;
       const outN = dirs.out ?? 0;
       if (inN === 0 && outN === 0) return;
-      rows.push(`
-        <tr>
-          <td class="cls-${cls}">${CLASS_LABELS[cls] || cls}</td>
-          <td class="num in">${inN}</td>
-          <td class="num out">${outN}</td>
-        </tr>`);
+      rows.push(`<tr>
+        <td class="cls-${cls}">${CLASS_LABELS[cls] || cls}</td>
+        <td class="num in">${inN}</td>
+        <td class="num out">${outN}</td>
+      </tr>`);
     });
   });
   if (!rows.length) rows.push(`<tr><td colspan="3" class="no-data">Aguardando cruzamentos...</td></tr>`);
@@ -111,47 +94,42 @@ function buildTableRows(counts) {
 }
 
 function buildRecentEvents(events) {
-  if (!events || !events.length) {
-    return '<div class="no-events">Sem eventos recentes</div>';
-  }
-  // mostrar os 10 mais recentes (já estão ordenados do mais antigo ao mais novo)
-  return [...events].reverse().slice(0, 10).map(ev => {
-    const t = formatTime(ev.occurred_at);
+  if (!events || !events.length) return '<div class="no-events">Sem eventos recentes</div>';
+  return [...events].reverse().slice(0, 8).map(ev => {
     const dir = ev.direction === 'in' ? '↑' : '↓';
     const dirCls = ev.direction === 'in' ? 'in' : 'out';
-    const label = CLASS_LABELS[ev.class_name] || ev.class_name;
-    return `
-      <div class="event-row">
-        <span class="event-time">${t}</span>
-        <span class="event-cls cls-${ev.class_name}">${label}</span>
-        <span class="event-zone">${ev.zone_name}</span>
-        <span class="event-dir ${dirCls}">${dir}</span>
-      </div>`;
+    return `<div class="event-row">
+      <span class="event-time">${formatTime(ev.occurred_at)}</span>
+      <span class="event-cls cls-${ev.class_name}">${CLASS_LABELS[ev.class_name] || ev.class_name}</span>
+      <span class="event-zone">${ev.zone_name}</span>
+      <span class="event-dir ${dirCls}">${dir}</span>
+    </div>`;
   }).join('');
-}
-
-function formatTime(iso) {
-  if (!iso) return '--:--:--';
-  try {
-    const d = new Date(iso);
-    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  } catch (_) { return '--:--:--'; }
 }
 
 function sumCounts(counts) {
   let totalIn = 0, totalOut = 0;
-  Object.values(counts).forEach(classCounts => {
-    Object.values(classCounts).forEach(dirs => {
-      totalIn  += dirs.in  ?? 0;
-      totalOut += dirs.out ?? 0;
-    });
-  });
+  Object.values(counts).forEach(cc => Object.values(cc).forEach(d => {
+    totalIn += d.in ?? 0; totalOut += d.out ?? 0;
+  }));
   return { totalIn, totalOut };
 }
 
-// ---------------------------------------------------------------------------
-// Card factory
-// ---------------------------------------------------------------------------
+function formatTime(iso) {
+  if (!iso) return '--:--:--';
+  try { return new Date(iso).toLocaleTimeString('pt-BR'); } catch (_) { return '--:--:--'; }
+}
+
+function formatDateTime(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+  } catch (_) { return '—'; }
+}
+
 function createCard(grid, sid) {
   const el = document.createElement('div');
   el.className = 'card';
@@ -162,7 +140,10 @@ function createCard(grid, sid) {
         <span class="dot offline"></span>
         <span style="margin-left:.4rem">${sid}</span>
       </div>
-      <span class="fps-badge">0.0 fps</span>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <span class="fps-badge">0.0 fps</span>
+        <button class="btn-detail" data-sid="${sid}">Relatório</button>
+      </div>
     </div>
 
     <div class="summary-stats">
@@ -177,13 +158,7 @@ function createCard(grid, sid) {
     </div>
 
     <table class="count-table">
-      <thead>
-        <tr>
-          <th>Tipo</th>
-          <th class="in">Entrada</th>
-          <th class="out">Saída</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Tipo</th><th class="in">Entrada</th><th class="out">Saída</th></tr></thead>
       <tbody></tbody>
     </table>
 
@@ -196,41 +171,166 @@ function createCard(grid, sid) {
   `;
   grid.appendChild(el);
 
+  el.querySelector('.btn-detail').addEventListener('click', () => openReport(sid));
+
   const ctx = el.querySelector('canvas').getContext('2d');
   const history = Array(HISTORY_WINDOW).fill(0);
-
   const chart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: history.map((_, i) => i),
-      datasets: [{
-        data: [...history],
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59,130,246,.15)',
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: true,
-        tension: 0.3,
-      }],
+      datasets: [{ data: [...history], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,.15)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.3 }],
     },
     options: {
-      animation: false,
-      responsive: true,
+      animation: false, responsive: true,
       plugins: { legend: { display: false } },
       scales: {
         x: { display: false },
-        y: {
-          display: true,
-          beginAtZero: true,
-          ticks: { color: '#94a3b8', maxTicksLimit: 3 },
-          grid: { color: '#1e293b' },
-        },
+        y: { display: true, beginAtZero: true, ticks: { color: '#94a3b8', maxTicksLimit: 3 }, grid: { color: '#1e293b' } },
       },
     },
   });
-
   return { el, chart, history };
 }
+
+// ---------------------------------------------------------------------------
+// Report modal
+// ---------------------------------------------------------------------------
+let reportChart = null;
+let currentSid = null;
+
+function openReport(sid) {
+  currentSid = sid;
+  document.getElementById('modal-stream-name').textContent = sid;
+  document.getElementById('report-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // set default: today
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  document.getElementById('filter-from').value = toLocalInput(todayStart);
+  document.getElementById('filter-to').value = toLocalInput(now);
+
+  fetchReport(sid);
+}
+
+function closeReport() {
+  document.getElementById('report-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+  currentSid = null;
+}
+
+function toLocalInput(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function fetchReport(sid) {
+  const from = document.getElementById('filter-from').value;
+  const to   = document.getElementById('filter-to').value;
+  const cls  = document.getElementById('filter-class').value;
+
+  let url = `/api/history/${encodeURIComponent(sid)}?limit=1000`;
+  if (from) url += `&from=${encodeURIComponent(new Date(from).toISOString())}`;
+  if (to)   url += `&to=${encodeURIComponent(new Date(to).toISOString())}`;
+  if (cls)  url += `&class=${encodeURIComponent(cls)}`;
+
+  try {
+    const rows = await fetch(url).then(r => r.json());
+    renderReport(rows);
+  } catch (e) {
+    document.getElementById('report-tbody').innerHTML =
+      `<tr><td colspan="4" style="color:var(--red);text-align:center">Erro ao carregar dados.</td></tr>`;
+  }
+}
+
+function renderReport(rows) {
+  // totals
+  const totals = {};
+  rows.forEach(r => {
+    const k = r.class_name;
+    if (!totals[k]) totals[k] = { in: 0, out: 0 };
+    totals[k][r.direction] = (totals[k][r.direction] || 0) + 1;
+  });
+
+  const totalHtml = Object.entries(totals).map(([cls, d]) => `
+    <div class="total-chip">
+      <span class="cls-${cls}">${CLASS_LABELS[cls] || cls}</span>
+      <span class="in">↑${d.in || 0}</span>
+      <span class="out">↓${d.out || 0}</span>
+    </div>`).join('');
+  document.getElementById('report-totals').innerHTML =
+    totalHtml || '<span style="color:var(--muted);font-size:.85rem">Sem dados no período.</span>';
+
+  // bar chart by hour
+  const byHour = {};
+  rows.forEach(r => {
+    const h = new Date(r.occurred_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit' });
+    byHour[h] = (byHour[h] || 0) + 1;
+  });
+  const labels = Object.keys(byHour);
+  const values = Object.values(byHour);
+
+  const chartCanvas = document.getElementById('report-chart');
+  if (reportChart) { reportChart.destroy(); reportChart = null; }
+  if (labels.length) {
+    reportChart = new Chart(chartCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ label: 'Cruzamentos', data: values, backgroundColor: 'rgba(59,130,246,.6)', borderColor: '#3b82f6', borderWidth: 1 }],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#94a3b8', maxRotation: 45 }, grid: { color: '#1e293b' } },
+          y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+        },
+      },
+    });
+  }
+
+  // table
+  const tbody = document.getElementById('report-tbody');
+  const empty = document.getElementById('report-empty');
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  tbody.innerHTML = rows.map(r => {
+    const dir = r.direction === 'in' ? '↑ Entrada' : '↓ Saída';
+    const dirCls = r.direction === 'in' ? 'in' : 'out';
+    return `<tr>
+      <td class="mono">${formatDateTime(r.occurred_at)}</td>
+      <td class="cls-${r.class_name}">${CLASS_LABELS[r.class_name] || r.class_name}</td>
+      <td style="color:var(--muted)">${r.zone_name}</td>
+      <td class="${dirCls}" style="font-weight:600">${dir}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Modal events
+document.getElementById('btn-modal-close').addEventListener('click', closeReport);
+document.getElementById('report-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('report-modal')) closeReport();
+});
+document.getElementById('btn-filter').addEventListener('click', () => {
+  if (currentSid) fetchReport(currentSid);
+});
+document.getElementById('btn-export').addEventListener('click', () => {
+  if (!currentSid) return;
+  const from = document.getElementById('filter-from').value;
+  const to   = document.getElementById('filter-to').value;
+  const cls  = document.getElementById('filter-class').value;
+  let url = `/api/history/${encodeURIComponent(currentSid)}/export?format=csv`;
+  if (from) url += `&from=${encodeURIComponent(new Date(from).toISOString())}`;
+  if (to)   url += `&to=${encodeURIComponent(new Date(to).toISOString())}`;
+  if (cls)  url += `&class=${encodeURIComponent(cls)}`;
+  window.open(url, '_blank');
+});
 
 // ---------------------------------------------------------------------------
 // Bootstrap

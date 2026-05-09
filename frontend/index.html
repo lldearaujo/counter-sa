@@ -15,25 +15,67 @@
       <a href="/config" class="nav-link">Configurar</a>
     </nav>
     <div class="header-status">
-      <span id="ws-indicator" class="dot offline" title="WebSocket"></span>
+      <span id="ws-indicator" class="dot offline"></span>
       <span id="ws-label">Desconectado</span>
     </div>
   </header>
 
   <main id="streams-grid" class="grid">
-    <div class="empty-state" id="empty-state">
-      Aguardando streams...
-    </div>
+    <div class="empty-state" id="empty-state">Aguardando streams...</div>
   </main>
 
-  <!-- Modal de detalhes -->
-  <dialog id="detail-modal">
-    <div class="modal-content">
-      <h2 id="modal-title">Detalhes</h2>
-      <canvas id="modal-chart" height="200"></canvas>
-      <button onclick="document.getElementById('detail-modal').close()">Fechar</button>
+  <!-- Modal de relatório por stream -->
+  <div id="report-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="modal-stream-name">—</h2>
+        <div class="modal-header-actions">
+          <button id="btn-export" class="btn-sm btn-secondary">⬇ Exportar CSV</button>
+          <button id="btn-modal-close" class="btn-sm btn-ghost">✕ Fechar</button>
+        </div>
+      </div>
+
+      <!-- Filtro de data -->
+      <div class="filter-row">
+        <label>De <input type="datetime-local" id="filter-from" /></label>
+        <label>Até <input type="datetime-local" id="filter-to" /></label>
+        <select id="filter-class">
+          <option value="">Todos os tipos</option>
+          <option value="pedestrian">Pedestre</option>
+          <option value="car">Carro</option>
+          <option value="motorcycle">Moto</option>
+          <option value="bus">Ônibus</option>
+          <option value="truck">Caminhão</option>
+          <option value="bicycle">Bicicleta</option>
+        </select>
+        <button id="btn-filter" class="btn-sm btn-primary">Filtrar</button>
+      </div>
+
+      <!-- Totais por tipo -->
+      <div class="report-totals" id="report-totals"></div>
+
+      <!-- Gráfico de barras por hora -->
+      <div class="chart-wrap">
+        <canvas id="report-chart" height="120"></canvas>
+      </div>
+
+      <!-- Tabela de eventos -->
+      <div class="report-table-wrap">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Data / Hora</th>
+              <th>Tipo</th>
+              <th>Zona</th>
+              <th>Direção</th>
+            </tr>
+          </thead>
+          <tbody id="report-tbody"></tbody>
+        </table>
+        <div id="report-empty" class="report-empty hidden">Nenhum evento encontrado.</div>
+      </div>
     </div>
-  </dialog>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>

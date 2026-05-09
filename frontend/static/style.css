@@ -117,15 +117,78 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
 .event-dir.out { color: var(--red); }
 .no-events { color: var(--muted); font-size: .8rem; padding: .25rem; }
 
-/* Modal */
-dialog {
-  background: var(--surface); color: var(--text); border: 1px solid var(--border);
-  border-radius: 1rem; padding: 1.5rem; max-width: 640px; width: 90vw;
+/* Botão Relatório no card */
+.btn-detail {
+  font-size: .72rem; padding: .2rem .55rem; border-radius: .35rem;
+  background: var(--border); color: var(--muted); border: none; cursor: pointer;
+  transition: background .15s, color .15s;
 }
-dialog::backdrop { background: rgba(0,0,0,.6); }
-.modal-content { display: flex; flex-direction: column; gap: 1rem; }
-dialog h2 { font-size: 1.1rem; }
-dialog button {
-  align-self: flex-end; background: var(--blue); color: #fff;
-  border: none; border-radius: .5rem; padding: .5rem 1.25rem; cursor: pointer;
+.btn-detail:hover { background: var(--blue); color: #fff; }
+
+/* Report modal overlay */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 2rem 1rem; z-index: 100; overflow-y: auto;
 }
+.modal-overlay.hidden { display: none; }
+
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: .75rem;
+  width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: 1rem;
+  padding: 1.5rem;
+}
+
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.modal-header h2 { font-size: 1.1rem; font-weight: 700; }
+.modal-header-actions { display: flex; gap: .5rem; }
+
+/* Small buttons */
+.btn-sm { font-size: .8rem; padding: .3rem .75rem; border-radius: .4rem; border: none; cursor: pointer; }
+.btn-primary   { background: var(--blue); color: #fff; }
+.btn-secondary { background: var(--border); color: var(--text); }
+.btn-ghost     { background: transparent; color: var(--muted); }
+.btn-ghost:hover { color: var(--red); }
+
+/* Filter row */
+.filter-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .6rem;
+  font-size: .82rem;
+}
+.filter-row label { display: flex; align-items: center; gap: .35rem; color: var(--muted); }
+.filter-row input, .filter-row select {
+  background: #0f172a; border: 1px solid var(--border); border-radius: .35rem;
+  color: var(--text); padding: .25rem .5rem; font-size: .82rem;
+}
+
+/* Report totals chips */
+.report-totals { display: flex; flex-wrap: wrap; gap: .5rem; }
+.total-chip {
+  display: flex; align-items: center; gap: .4rem;
+  background: #0f172a; border: 1px solid var(--border); border-radius: .5rem;
+  padding: .35rem .65rem; font-size: .82rem; font-weight: 600;
+}
+.total-chip .in  { color: var(--green); }
+.total-chip .out { color: var(--red); }
+
+/* Bar chart */
+.chart-wrap { position: relative; }
+
+/* Report table */
+.report-table-wrap { max-height: 380px; overflow-y: auto; border-radius: .5rem; border: 1px solid var(--border); }
+.report-table-wrap::-webkit-scrollbar { width: 6px; }
+.report-table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.report-table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+.report-table th {
+  position: sticky; top: 0; background: #0f172a;
+  text-align: left; color: var(--muted); font-weight: 500;
+  padding: .5rem .75rem; border-bottom: 1px solid var(--border);
+}
+.report-table td { padding: .4rem .75rem; border-bottom: 1px solid #1e293b; }
+.report-table tr:last-child td { border-bottom: none; }
+.report-table tr:hover td { background: #0f172a; }
+.report-empty { text-align: center; color: var(--muted); padding: 2rem; font-size: .85rem; }
+
+.mono { font-variant-numeric: tabular-nums; font-family: monospace; }
