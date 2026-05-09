@@ -151,3 +151,46 @@ async def get_stream_snapshot(stream_id: str, request: Request):
     if cfg is None:
         raise HTTPException(status_code=404, detail=f"Stream '{stream_id}' não encontrado")
     return await _snapshot_response(cfg["rtsp_url"])
+
+
+@router.get("/{stream_id}/snapshot/zones")
+async def get_snapshot_with_zones(stream_id: str, request: Request):
+    """Retorna snapshot com as zonas desenhadas para verificação visual."""
+    import cv2, numpy as np
+    manager = request.app.state.stream_manager
+    cfg = manager.get_config(stream_id)
+    if cfg is None:
+        raise HTTPException(status_code=404, detail=f"Stream '{stream_id}' não encontrado")
+
+    loop = asyncio.get_event_loop()
+    try:
+        jpeg_bytes = await asyncio.wait_for(
+            loop.run_in_executor(None, _grab_snapshot_sync, cfg["rtsp_url"]),
+            timeout=12.0,
+        )
+    except (asyncio.TimeoutError, RuntimeError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    # Decode, draw zones, re-encode
+    img = cv2.imdecode(np.frombuffer(jpeg_bytes, np.uint8), cv2.IMREAD_COLOR)
+    colors = [(255, 80, 80), (80, 255, 80), (80, 80, 255), (255, 255, 80)]
+    for i, zone in enumerate(cfg.get("counting_zones", [])):
+        pts = zone.get("points", [])
+        color = colors[i % len(colors)]
+        if zone.get("type", "line") == "line" and len(pts) >= 2:
+            p1 = (int(pts[0][0]), int(pts[0][1]))
+            p2 = (int(pts[1][0]), int(pts[1][1]))
+            cv2.line(img, p1, p2, color, 4)
+            cv2.circle(img, p1, 10, color, -1)
+            cv2.circle(img, p2, 10, color, -1)
+            mid = ((p1[0]+p2[0])//2, (p1[1]+p2[1])//2)
+            cv2.putText(img, zone.get("name", f"zona_{i+1}"), (mid[0]+8, mid[1]-8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
+        elif len(pts) >= 3:
+            poly = np.array([[int(p[0]), int(p[1])] for p in pts], np.int32)
+            cv2.polylines(img, [poly], True, color, 4)
+
+    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    if not ok:
+        raise HTTPException(status_code=500, detail="Falha ao codificar imagem")
+    return Response(content=buf.tobytes(), media_type="image/jpeg")
