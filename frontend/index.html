@@ -51,11 +51,15 @@
         <button id="btn-filter" class="btn-sm btn-primary">Filtrar</button>
       </div>
 
-      <!-- Totais por tipo -->
+      <!-- Sumário: total, pico, tipo mais frequente -->
+      <div id="report-summary" class="report-summary hidden"></div>
+
+      <!-- Chips por tipo -->
       <div class="report-totals" id="report-totals"></div>
 
-      <!-- Gráfico de barras por hora -->
+      <!-- Gráfico 24h -->
       <div class="chart-wrap">
+        <div class="chart-title">Cruzamentos por hora do dia</div>
         <canvas id="report-chart" height="120"></canvas>
       </div>
 

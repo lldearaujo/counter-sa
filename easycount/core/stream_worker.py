@@ -50,6 +50,7 @@ class StreamWorker(mp.Process):
         inf_cfg = self._app_cfg.get("inference", {})
         cap_cfg = self._app_cfg.get("capture", {})
         trk_cfg = self._app_cfg.get("tracking", {})
+        cnt_cfg = self._app_cfg.get("counting", {})
 
         # Frame buffer: capturer escreve, inference loop lê
         frame_buffer: deque = deque(maxlen=cap_cfg.get("frame_buffer_size", 2))
@@ -94,7 +95,10 @@ class StreamWorker(mp.Process):
         )
 
         counting_zones = self._stream_cfg.get("counting_zones", [])
-        counter = Counter(zones=counting_zones)
+        counter = Counter(
+            zones=counting_zones,
+            max_match_dist=cnt_cfg.get("max_match_dist", 600.0),
+        )
 
         capturer.start()
         log.info("Worker iniciado para stream: %s", sid)

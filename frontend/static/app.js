@@ -245,63 +245,112 @@ async function fetchReport(sid) {
 }
 
 function renderReport(rows) {
-  // totals
-  const totals = {};
-  rows.forEach(r => {
-    const k = r.class_name;
-    if (!totals[k]) totals[k] = { in: 0, out: 0 };
-    totals[k][r.direction] = (totals[k][r.direction] || 0) + 1;
-  });
+  const summaryEl = document.getElementById('report-summary');
+  const totalsEl  = document.getElementById('report-totals');
+  const tbody     = document.getElementById('report-tbody');
+  const empty     = document.getElementById('report-empty');
 
-  const totalHtml = Object.entries(totals).map(([cls, d]) => `
-    <div class="total-chip">
-      <span class="cls-${cls}">${CLASS_LABELS[cls] || cls}</span>
-      <span class="in">↑${d.in || 0}</span>
-      <span class="out">↓${d.out || 0}</span>
-    </div>`).join('');
-  document.getElementById('report-totals').innerHTML =
-    totalHtml || '<span style="color:var(--muted);font-size:.85rem">Sem dados no período.</span>';
-
-  // bar chart by hour
-  const byHour = {};
-  rows.forEach(r => {
-    const h = new Date(r.occurred_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit' });
-    byHour[h] = (byHour[h] || 0) + 1;
-  });
-  const labels = Object.keys(byHour);
-  const values = Object.values(byHour);
-
-  const chartCanvas = document.getElementById('report-chart');
   if (reportChart) { reportChart.destroy(); reportChart = null; }
-  if (labels.length) {
-    reportChart = new Chart(chartCanvas.getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{ label: 'Cruzamentos', data: values, backgroundColor: 'rgba(59,130,246,.6)', borderColor: '#3b82f6', borderWidth: 1 }],
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: '#94a3b8', maxRotation: 45 }, grid: { color: '#1e293b' } },
-          y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
-        },
-      },
-    });
-  }
 
-  // table
-  const tbody = document.getElementById('report-tbody');
-  const empty = document.getElementById('report-empty');
   if (!rows.length) {
+    summaryEl.classList.add('hidden');
+    totalsEl.innerHTML = '<span style="color:var(--muted);font-size:.85rem">Sem dados no período.</span>';
     tbody.innerHTML = '';
     empty.classList.remove('hidden');
     return;
   }
   empty.classList.add('hidden');
+
+  // --- totais por classe ---
+  const totals = {};
+  rows.forEach(r => {
+    if (!totals[r.class_name]) totals[r.class_name] = { in: 0, out: 0 };
+    totals[r.class_name][r.direction] = (totals[r.class_name][r.direction] || 0) + 1;
+  });
+
+  // --- contagens por hora (0-23) ---
+  const hourCounts = Array(24).fill(0);
+  rows.forEach(r => {
+    const h = new Date(r.occurred_at).getHours();
+    if (h >= 0 && h < 24) hourCounts[h]++;
+  });
+
+  const maxCount  = Math.max(...hourCounts);
+  const peakHour  = maxCount > 0 ? hourCounts.indexOf(maxCount) : null;
+
+  // tipo mais frequente
+  const sorted = Object.entries(totals)
+    .map(([k, v]) => [k, v.in + v.out])
+    .sort((a, b) => b[1] - a[1]);
+  const topEntry = sorted[0];
+
+  // --- sumário ---
+  summaryEl.classList.remove('hidden');
+  summaryEl.innerHTML = `
+    <div class="summary-item">
+      <span class="summary-label">Total Impactos</span>
+      <span class="summary-value">${rows.length}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Horário de Pico</span>
+      <span class="summary-value">${peakHour !== null ? peakHour + 'h' : '—'}</span>
+      <span class="summary-sub">${maxCount > 0 ? maxCount + ' cruzamentos' : 'Sem dados'}</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Tipo mais frequente</span>
+      <span class="summary-value cls-${topEntry ? topEntry[0] : ''}">${topEntry ? (CLASS_LABELS[topEntry[0]] || topEntry[0]) : '—'}</span>
+      <span class="summary-sub">${topEntry ? topEntry[1] + ' detecções' : ''}</span>
+    </div>`;
+
+  // --- chips por tipo ---
+  totalsEl.innerHTML = sorted.map(([cls, total]) => {
+    const d = totals[cls];
+    return `<div class="total-chip">
+      <span class="cls-${cls}">${CLASS_LABELS[cls] || cls}</span>
+      <span class="chip-count">${total}</span>
+      <span class="chip-detail">↑${d.in} ↓${d.out}</span>
+    </div>`;
+  }).join('');
+
+  // --- gráfico 24h ---
+  const labels = Array.from({ length: 24 }, (_, i) => i + 'h');
+  const bgColors = hourCounts.map((_, i) =>
+    i === peakHour ? 'rgba(234,179,8,.8)' : 'rgba(59,130,246,.55)'
+  );
+  const borderColors = hourCounts.map((_, i) =>
+    i === peakHour ? '#eab308' : '#3b82f6'
+  );
+
+  reportChart = new Chart(document.getElementById('report-chart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Cruzamentos',
+        data: hourCounts,
+        backgroundColor: bgColors,
+        borderColor: borderColors,
+        borderWidth: 1,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => `${ctx.parsed.y} cruzamentos` },
+        },
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } },
+        y: { beginAtZero: true, ticks: { color: '#94a3b8', precision: 0 }, grid: { color: '#1e293b' } },
+      },
+    },
+  });
+
+  // --- tabela ---
   tbody.innerHTML = rows.map(r => {
-    const dir = r.direction === 'in' ? '↑ Entrada' : '↓ Saída';
+    const dir    = r.direction === 'in' ? '↑ Entrada' : '↓ Saída';
     const dirCls = r.direction === 'in' ? 'in' : 'out';
     return `<tr>
       <td class="mono">${formatDateTime(r.occurred_at)}</td>

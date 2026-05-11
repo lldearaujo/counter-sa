@@ -163,6 +163,25 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
   color: var(--text); padding: .25rem .5rem; font-size: .82rem;
 }
 
+/* Utilitário global */
+.hidden { display: none !important; }
+
+/* Report summary row */
+.report-summary {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem;
+}
+.summary-item {
+  background: #0f172a; border: 1px solid var(--border); border-radius: .5rem;
+  padding: .65rem .75rem; display: flex; flex-direction: column; gap: .1rem;
+}
+.summary-label {
+  font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em;
+}
+.summary-value {
+  font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.summary-sub { font-size: .72rem; color: var(--muted); }
+
 /* Report totals chips */
 .report-totals { display: flex; flex-wrap: wrap; gap: .5rem; }
 .total-chip {
@@ -170,11 +189,15 @@ body { background: var(--bg); color: var(--text); font-family: system-ui, sans-s
   background: #0f172a; border: 1px solid var(--border); border-radius: .5rem;
   padding: .35rem .65rem; font-size: .82rem; font-weight: 600;
 }
-.total-chip .in  { color: var(--green); }
-.total-chip .out { color: var(--red); }
+.chip-count { font-size: .95rem; font-variant-numeric: tabular-nums; }
+.chip-detail { font-size: .72rem; color: var(--muted); font-weight: 400; }
 
 /* Bar chart */
 .chart-wrap { position: relative; }
+.chart-title {
+  font-size: .68rem; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .05em; margin-bottom: .3rem;
+}
 
 /* Report table */
 .report-table-wrap { max-height: 380px; overflow-y: auto; border-radius: .5rem; border: 1px solid var(--border); }

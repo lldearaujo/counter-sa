@@ -23,6 +23,9 @@ tracking:
   min_hits: 1             # detecções para confirmar track novo
   iou_threshold: 0.3
 
+counting:
+  max_match_dist: 600   # pixels máximos para matching por proximidade entre frames
+
 database:
   snapshot_interval_sec: 60   # frequência de insert em count_snapshots
   pool_min_size: 2

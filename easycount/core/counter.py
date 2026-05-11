@@ -51,7 +51,7 @@ class Counter:
 
     Line zones use proximity-based matching between consecutive frames —
     each current detection is paired with the nearest same-class detection
-    from the previous frame within MAX_MATCH_DIST pixels.  This avoids the
+    from the previous frame within max_match_dist pixels.  This avoids the
     track-ID discontinuity problem that arises when fast-moving objects get
     a new track_id every frame.
 
@@ -59,10 +59,8 @@ class Counter:
     which works well for slower region-entry events.
     """
 
-    # Max pixel distance to match a detection to its previous-frame counterpart
-    _MAX_MATCH_DIST: float = 250.0
-
-    def __init__(self, zones: list[dict[str, Any]]) -> None:
+    def __init__(self, zones: list[dict[str, Any]], max_match_dist: float = 600.0) -> None:
+        self._max_match_dist = max_match_dist
         self._zones: list[ZoneConfig] = [self._parse_zone(z) for z in zones]
         self._zone_counts: dict[str, ZoneCounts] = {
             z.name: ZoneCounts(zone_name=z.name) for z in self._zones
@@ -145,7 +143,7 @@ class Counter:
                 continue
 
             # Greedy nearest-neighbour: same class, within radius, not yet matched
-            best_dist = self._MAX_MATCH_DIST
+            best_dist = self._max_match_dist
             best_idx = -1
             for i, (prev_pt, prev_cls, _prev_side) in enumerate(prev_pts):
                 if i in used_prev or prev_cls != cls:
