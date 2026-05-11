@@ -51,12 +51,16 @@ function renderAll(data) {
 }
 
 function updateCard(grid, sid, streamData) {
-  const { counts = {}, fps = 0, online = false, recent_events = [] } = streamData;
+  const { counts = {}, fps = 0, online = false, recent_events = [], det_count = 0, track_count = 0 } = streamData;
   if (!streamCards[sid]) streamCards[sid] = createCard(grid, sid);
   const { el, chart, history } = streamCards[sid];
 
   el.querySelector('.dot').className = 'dot ' + (online ? 'online' : 'offline');
   el.querySelector('.fps-badge').textContent = fps.toFixed(1) + ' fps';
+
+  const detBadge = el.querySelector('.det-badge');
+  detBadge.textContent = `👁 ${det_count} det · ${track_count} tracks`;
+  detBadge.className = 'det-badge ' + (det_count > 0 ? 'det-active' : 'det-zero');
 
   const { totalIn, totalOut } = sumCounts(counts);
   el.querySelector('.stat-in .stat-num').textContent = totalIn;
@@ -143,8 +147,11 @@ function createCard(grid, sid) {
       <div style="display:flex;align-items:center;gap:.5rem">
         <span class="fps-badge">0.0 fps</span>
         <button class="btn-detail" data-sid="${sid}">Relatório</button>
+        <a class="btn-debug" href="/api/streams/${sid}/snapshot/debug" target="_blank">Debug</a>
       </div>
     </div>
+
+    <div class="det-badge det-zero">👁 0 det · 0 tracks</div>
 
     <div class="summary-stats">
       <div class="stat-box stat-in">

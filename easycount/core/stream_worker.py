@@ -160,6 +160,8 @@ class StreamWorker(mp.Process):
                         "fps": self._current_fps,
                         "online": True,
                         "counts": counts_snapshot,
+                        "det_count": len(detections),
+                        "track_count": len(tracks),
                         "events": [
                             {
                                 "track_id": e.track_id,

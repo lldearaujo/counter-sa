@@ -49,7 +49,12 @@ class Aggregator(threading.Thread):
     def _process(self, result: dict[str, Any]) -> None:
         from datetime import datetime, timezone
         sid = result["stream_id"]
-        self._store.update_counts(sid, result.get("counts", {}))
+        self._store.update_counts(
+            sid,
+            result.get("counts", {}),
+            det_count=result.get("det_count", 0),
+            track_count=result.get("track_count", 0),
+        )
         self._store.update_fps(sid, result.get("fps", 0.0))
 
         events = result.get("events", [])

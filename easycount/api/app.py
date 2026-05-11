@@ -108,6 +108,7 @@ async def lifespan(app: FastAPI):
     app.state.memory_store = memory_store
     app.state.stream_manager = stream_manager
     app.state.aggregator = aggregator
+    app.state.app_config = app_config
     app.state.start_time = _start_time
 
     log.info("EasyCount iniciado")

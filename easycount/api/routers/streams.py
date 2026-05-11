@@ -153,6 +153,104 @@ async def get_stream_snapshot(stream_id: str, request: Request):
     return await _snapshot_response(cfg["rtsp_url"])
 
 
+@router.get("/{stream_id}/snapshot/debug")
+async def get_debug_snapshot(stream_id: str, request: Request):
+    """Frame ao vivo com detecções YOLO + zona desenhada — para diagnóstico."""
+    import cv2, numpy as np, os
+    from easycount.core.detector import Detector
+
+    manager = request.app.state.stream_manager
+    cfg = manager.get_config(stream_id)
+    if cfg is None:
+        raise HTTPException(status_code=404, detail=f"Stream '{stream_id}' não encontrado")
+
+    app_config = request.app.state.app_config
+    inf_cfg = app_config.get("inference", {})
+    model_path = inf_cfg.get("model_path", "models/yolov8n_int8.onnx")
+    fallback = inf_cfg.get("model_path_fp32", "models/yolov8n.onnx")
+    if not os.path.exists(model_path):
+        model_path = fallback if os.path.exists(fallback) else None
+    if model_path is None:
+        raise HTTPException(status_code=503, detail="Modelo YOLO não encontrado")
+
+    loop = asyncio.get_event_loop()
+    try:
+        jpeg_bytes = await asyncio.wait_for(
+            loop.run_in_executor(None, _grab_snapshot_sync, cfg["rtsp_url"]),
+            timeout=12.0,
+        )
+    except (asyncio.TimeoutError, RuntimeError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    img = cv2.imdecode(np.frombuffer(jpeg_bytes, np.uint8), cv2.IMREAD_COLOR)
+    h, w = img.shape[:2]
+
+    def _run_inference():
+        det = Detector(
+            model_path=model_path,
+            input_size=tuple(inf_cfg.get("input_size", [640, 640])),
+            nms_threshold=inf_cfg.get("nms_threshold", 0.45),
+            intra_op_threads=1,
+            inter_op_threads=1,
+            class_thresholds=app_config.get("class_thresholds"),
+            max_detections=inf_cfg.get("max_detections", 50),
+            stream_id="debug",
+        )
+        return det.infer(img)
+
+    detections = await loop.run_in_executor(None, _run_inference)
+
+    # Cores por classe
+    cls_colors = {
+        "pedestrian": (0, 165, 255),
+        "car": (0, 255, 0),
+        "motorcycle": (0, 255, 255),
+        "bus": (255, 0, 255),
+        "truck": (0, 128, 255),
+        "bicycle": (255, 255, 0),
+    }
+
+    # Desenhar zonas
+    zone_colors = [(80, 80, 255), (80, 255, 80), (255, 80, 80), (255, 255, 80)]
+    for i, zone in enumerate(cfg.get("counting_zones", [])):
+        pts = zone.get("points", [])
+        zcolor = zone_colors[i % len(zone_colors)]
+        if zone.get("type", "line") == "line" and len(pts) >= 2:
+            p1 = (int(pts[0][0]), int(pts[0][1]))
+            p2 = (int(pts[1][0]), int(pts[1][1]))
+            cv2.line(img, p1, p2, zcolor, 3)
+            cv2.circle(img, p1, 8, zcolor, -1)
+            cv2.circle(img, p2, 8, zcolor, -1)
+            mid = ((p1[0] + p2[0]) // 2, (p1[1] + p2[1]) // 2)
+            cv2.putText(img, zone.get("name", f"zona_{i+1}"), (mid[0] + 6, mid[1] - 6),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, zcolor, 2)
+        elif len(pts) >= 3:
+            poly = np.array([[int(p[0]), int(p[1])] for p in pts], np.int32)
+            cv2.polylines(img, [poly], True, zcolor, 3)
+
+    # Desenhar detecções
+    for det in detections:
+        x1, y1, x2, y2 = [int(v) for v in det.bbox]
+        color = cls_colors.get(det.class_name, (180, 180, 180))
+        cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
+        label = f"{det.class_name} {det.confidence:.2f}"
+        (lw, lh), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        cv2.rectangle(img, (x1, y1 - lh - 6), (x1 + lw + 4, y1), color, -1)
+        cv2.putText(img, label, (x1 + 2, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+        cv2.circle(img, (cx, cy), 4, color, -1)
+
+    # Info no topo
+    info = f"Detectados: {len(detections)}  |  Frame: {w}x{h}  |  Modelo: {os.path.basename(model_path)}"
+    cv2.rectangle(img, (0, 0), (w, 36), (0, 0, 0), -1)
+    cv2.putText(img, info, (8, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 1)
+
+    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    if not ok:
+        raise HTTPException(status_code=500, detail="Falha ao codificar imagem")
+    return Response(content=buf.tobytes(), media_type="image/jpeg")
+
+
 @router.get("/{stream_id}/snapshot/zones")
 async def get_snapshot_with_zones(stream_id: str, request: Request):
     """Retorna snapshot com as zonas desenhadas para verificação visual."""

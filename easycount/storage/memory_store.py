@@ -14,11 +14,13 @@ class MemoryStore:
 
     _MAX_RECENT = 30
 
-    def update_counts(self, stream_id: str, counts: dict[str, Any]) -> None:
+    def update_counts(self, stream_id: str, counts: dict[str, Any], det_count: int = 0, track_count: int = 0) -> None:
         with self._lock:
             entry = self._data.setdefault(stream_id, {"counts": {}, "fps": 0.0, "online": False, "recent_events": []})
             entry["counts"] = counts
             entry["online"] = True
+            entry["det_count"] = det_count
+            entry["track_count"] = track_count
 
     def add_event(self, stream_id: str, event: dict[str, Any]) -> None:
         with self._lock:
